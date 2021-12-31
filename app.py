@@ -1,12 +1,11 @@
-from flask import Flask
-from flask_socketio import SocketIO, send, emit
+from flask import Flask, request
+from flask_socketio import SocketIO, join_room, send, emit, rooms
 from os import system
 
 app = Flask(__name__)
 app.config['SECRET_TYPE']='rohit@secret'
 app.config['SESSION_TYPE'] = 'filesystem'
 sio = SocketIO(app, cors_allowed_origins="*")
-
 
 @app.route('/')
 def hello_world():
@@ -15,13 +14,14 @@ def hello_world():
 @sio.on('connect')
 def connect():
     print('Someone has Connected!')
+    print(f'sid: {request.sid}')
 
 @sio.on('disconnect')
 def disconnect():
     print('Disconnected!')
 
-@sio.on('global message')
-def handleGlobalMessage(message):
+@sio.on('global message', namespace='/')
+def handleGlobalMessageRoot(message):
     print(message)
     emit('global message', message, broadcast=True)
     
