@@ -1,44 +1,41 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_socketio import SocketIO, join_room, send, emit, rooms
-from os import system
 from json import loads
-from sqlalchemy import engine, create_engine, Column, String
-from sqlalchemy.orm import declarative_base, sessionmaker
+from functools import wraps
+from db_handler import Session, User
+import jwt
+import datetime
 
 # Flask app
 app = Flask(__name__)
-app.config['SECRET_TYPE'] = 'rohit@secret'
 app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SECRET_KEY'] = 'rohit@secret'
+
 sio = SocketIO(app, cors_allowed_origins="*")
 
-# Sqlalchemy
-engine = create_engine("mysql+pymysql://rohit:Password@localhost/ez_chat",
-                       echo=False, future=True)
-Base = declarative_base()
 
-# User class
+def protected_wrapper(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        token = loads(request.data)['token']
+        print(token)
+        if(token == None):
+            return 'No token provided!', 400
+        
+        try:
+            jwt.decode(token, key=app.config['SECRET_KEY'], algorithms=['HS256'])
+        except jwt.InvalidTokenError:
+            return 'Invalid token!', 401
+        except jwt.ExpiredSignatureError:
+            return 'Token expired!', 401
+        except:
+            return 'Unknown error!', 400
+
+        return f(*args, **kwargs)
+    return wrapper
 
 
-class User(Base):
-    __tablename__ = 'User'
-
-    username = Column(String(50), primary_key=True)
-    password = Column(String(50))
-
-    def __init__(self, username: str, password: str):
-        self.username = username
-        self.password = password
-
-    def __repr__(self):
-        return f'username: {self.username}; password: {self.password}'
-
-
-# Create the database
-Base.metadata.create_all(engine)
-
-# Create a session
-Session = sessionmaker(bind=engine)
-
+# Routes
 
 @app.route('/')
 def hello_world():
@@ -65,10 +62,20 @@ def sign_in():
     for user in session.query(User).all():
         if(user.username==authData['username']):
             if(user.password == authData['password']):
-                return 'Everything fine'
+                token = jwt.encode(payload={'user': user.username, 'exp': datetime.datetime.now() + datetime.datetime(hour=24)}, key=app.config['SECRET_KEY'])
+                return jsonify({'token': token})
             else:
                 return 'Wrong password'
     return 'No user found'
+
+
+@app.route('/protected_route')
+@protected_wrapper
+def protectedRoute():
+    return 'You have reached protected route.'
+
+
+# Websocket events
 
 @sio.on('connect')
 def connect():
@@ -78,7 +85,7 @@ def connect():
 
 @sio.on('disconnect')
 def disconnect():
-    print('Disconnected!')
+    print('Someone has disconnected!')
 
 
 @sio.on('global message', namespace='/')
@@ -86,6 +93,8 @@ def handleGlobalMessageRoot(message):
     print(message)
     emit('global message', message, broadcast=True)
 
+
+# Run app
 
 if(__name__ == '__main__'):
     print('Starting server...')
