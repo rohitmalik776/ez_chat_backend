@@ -5,6 +5,7 @@ from functools import wraps
 from db_handler import Session, User
 import jwt
 import datetime
+import sys
 
 # Flask app
 app = Flask(__name__)
@@ -20,16 +21,16 @@ def protected_wrapper(f):
         token = loads(request.data)['token']
         print(token)
         if(token == None):
-            return 'No token provided!', 400
+            return jsonify('No token provided!'), 400
         
         try:
             jwt.decode(token, key=app.config['SECRET_KEY'], algorithms=['HS256'])
         except jwt.InvalidTokenError:
-            return 'Invalid token!', 401
+            return jsonify('Invalid token!'), 401
         except jwt.ExpiredSignatureError:
-            return 'Token expired!', 401
+            return jsonify('Token expired!'), 401
         except:
-            return 'Unknown error!', 400
+            return jsonify('Unknown error!'), 400
 
         return f(*args, **kwargs)
     return wrapper
@@ -42,37 +43,41 @@ def hello_world():
     return 'Hello World!'
 
 
-@app.route('/api/auth/signup/')
+@app.route('/api/auth/signup/', methods=['POST'])
 def sign_up():
     authData = loads(request.data)
     session = Session()
     newUser = User(username=authData['username'],
                    password=authData['password'])
-    session.add(newUser)
-    session.commit()
+    try:
+        session.add(newUser)
+        session.commit()
+    except:
+        session.close()
+        return jsonify({'message': 'Some error occured!', 'exception': sys.exc_info()[0], 'loginStatus': 'fail'})
     session.close()
+    return jsonify({'message': 'Created new user!', 'exception': 'none', 'loginStatus': 'success'})
 
-    return 'Works!'
 
-
-@app.route('/api/auth/signin/')
+@app.route('/api/auth/signin/', methods=['POST'])
 def sign_in():
     authData = loads(request.data)
+    print(f'Login request from: {request.data}')
     session = Session()
     for user in session.query(User).all():
         if(user.username==authData['username']):
             if(user.password == authData['password']):
-                token = jwt.encode(payload={'user': user.username, 'exp': datetime.datetime.now() + datetime.datetime(hour=24)}, key=app.config['SECRET_KEY'])
-                return jsonify({'token': token})
+                token = jwt.encode(payload={'user': user.username, 'exp': datetime.datetime.now() + datetime.timedelta(hours=5)}, key=app.config['SECRET_KEY'])
+                return jsonify({'jwt': token, 'loginStatus': 'success', 'username': authData['username']})
             else:
-                return 'Wrong password'
-    return 'No user found'
+                return jsonify({'jwt': None,'loginStatus': 'Wrong password'})
+    return jsonify({'jwt': None,'loginStatus': 'No user found'})
 
 
 @app.route('/protected_route')
 @protected_wrapper
 def protectedRoute():
-    return 'You have reached protected route.'
+    return jsonify('You have reached protected route.')
 
 
 # Websocket events
