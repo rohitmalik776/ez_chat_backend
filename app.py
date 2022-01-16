@@ -95,7 +95,6 @@ def disconnect():
 
 @sio.on('global message', namespace='/')
 def handleGlobalMessageRoot(message):
-    print(message)
     emit('global message', message, broadcast=True)
 
 
