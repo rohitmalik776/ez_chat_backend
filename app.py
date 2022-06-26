@@ -124,4 +124,4 @@ def handleGlobalMessageRoot(message):
 
 if(__name__ == '__main__'):
     print('Starting server...')
-    sio.run(app, debug=True, host='0.0.0.0', port='5000')
+    sio.run(app, debug=False, host='0.0.0.0', port='5000')
