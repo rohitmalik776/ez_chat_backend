@@ -2,10 +2,14 @@ from flask import Flask, request, jsonify
 from flask_socketio import SocketIO, join_room, send, emit, rooms
 from json import loads
 from functools import wraps
-from db_handler import Session, User
 import jwt
 import datetime
 import sys
+
+from sqlalchemy import false
+
+from utils import jsonDecode
+from db_handler import Session, User
 
 # Flask app
 app = Flask(__name__)
@@ -18,17 +22,22 @@ sio = SocketIO(app, cors_allowed_origins="*")
 def protected_wrapper(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
-        token = loads(request.data)['token']
-        print(token)
+        # For backward compatibility
+        token = jsonDecode(request.data).get('token')
+        # This is the better version
+        # TODO: Migrate to better version.
+        if(token == None):
+            token = request.headers.get('Authorization')
         if(token == None):
             return jsonify('No token provided!'), 400
-        
+
         try:
-            jwt.decode(token, key=app.config['SECRET_KEY'], algorithms=['HS256'])
-        except jwt.InvalidTokenError:
-            return jsonify('Invalid token!'), 401
+            jwt.decode(
+                token, key=app.config['SECRET_KEY'], algorithms=['HS256'])
         except jwt.ExpiredSignatureError:
             return jsonify('Token expired!'), 401
+        except jwt.InvalidTokenError:
+            return jsonify('Invalid token!'), 401
         except:
             return jsonify('Unknown error!'), 400
 
@@ -45,7 +54,8 @@ def hello_world():
 
 @app.route('/api/auth/signup/', methods=['POST'])
 def sign_up():
-    authData = loads(request.data)
+    # authData = loads(request.data)
+    authData = jsonDecode(request.data)
     session = Session()
     newUser = User(username=authData['username'],
                    password=authData['password'])
@@ -61,17 +71,19 @@ def sign_up():
 
 @app.route('/api/auth/signin/', methods=['POST'])
 def sign_in():
-    authData = loads(request.data)
+    # authData = loads(request.data)
+    authData = jsonDecode(request.data)
     print(f'Login request from: {request.data}')
     session = Session()
     for user in session.query(User).all():
-        if(user.username==authData['username']):
+        if(user.username == authData['username']):
             if(user.password == authData['password']):
-                token = jwt.encode(payload={'user': user.username, 'exp': datetime.datetime.now() + datetime.timedelta(hours=5)}, key=app.config['SECRET_KEY'])
+                token = jwt.encode(payload={'user': user.username, 'exp': datetime.datetime.now(
+                ) + datetime.timedelta(hours=5)}, key=app.config['SECRET_KEY'])
                 return jsonify({'jwt': token, 'loginStatus': 'success', 'username': authData['username']})
             else:
-                return jsonify({'jwt': None,'loginStatus': 'Wrong password'})
-    return jsonify({'jwt': None,'loginStatus': 'No user found'})
+                return jsonify({'jwt': None, 'loginStatus': 'Wrong password'})
+    return jsonify({'jwt': None, 'loginStatus': 'No user found'})
 
 
 @app.route('/protected_route')
@@ -84,8 +96,18 @@ def protectedRoute():
 
 @sio.on('connect')
 def connect():
+    token = request.headers.get('Authorization')
+
+    try:
+        jwt.decode(
+            token, key=app.config['SECRET_KEY'], algorithms=['HS256'])
+    except:
+        print('Denied websocket connection')
+        return False
+
     print('Someone has Connected!')
     print(f'sid: {request.sid}')
+    return True
 
 
 @sio.on('disconnect')
