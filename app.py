@@ -48,8 +48,8 @@ def protected_wrapper(f):
 # Routes
 
 @app.route('/')
-def hello_world():
-    return 'Hello World!'
+def base_route():
+    return 'Application is running perfectly 👍'
 
 
 @app.route('/api/auth/signup/', methods=['POST'])
