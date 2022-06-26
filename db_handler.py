@@ -2,8 +2,13 @@ from sqlalchemy import engine, create_engine, Column, String
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 # Sqlalchemy
-engine = create_engine("mysql+pymysql://root:Password@localhost/ez_chat",
+# ://username:password@host/db_name
+# engine = create_engine("mysql+pymysql://root:Password@localhost/ez_chat",
+#                        echo=False, future=True)
+
+engine = create_engine("postgresql+psycopg2://rohit:Password@localhost/ez_chat",
                        echo=False, future=True)
+
 Base = declarative_base()
 
 # User class
