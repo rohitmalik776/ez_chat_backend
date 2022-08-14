@@ -127,8 +127,8 @@ def handleGlobalMessageRoot(message):
 
 # Run app
 
-# if(__name__ == '__main__'):
-print('Starting server...')
-isDebug = getenv("DEBUG") == "True"
-port = int(getenv("PORT"))
-sio.run(app, debug=isDebug, host='0.0.0.0', port=port)
+if(__name__ == '__main__'):
+    print('Starting server...')
+    isDebug = getenv("DEBUG") == "True"
+    port = int(getenv("PORT"))
+    sio.run(app, debug=isDebug, host='0.0.0.0', port=port)
