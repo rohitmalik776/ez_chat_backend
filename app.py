@@ -2,6 +2,9 @@ from flask import Flask, request, jsonify
 from flask_socketio import SocketIO, join_room, send, emit, rooms
 from json import loads
 from functools import wraps
+from os import getenv
+from dotenv import load_dotenv
+
 import jwt
 import datetime
 import sys
@@ -11,10 +14,13 @@ from sqlalchemy import false
 from utils import jsonDecode
 from db_handler import Session, User
 
+# Load environment variables from .env
+load_dotenv()
+
 # Flask app
 app = Flask(__name__)
 app.config['SESSION_TYPE'] = 'filesystem'
-app.config['SECRET_KEY'] = 'rohit@secret'
+app.config['SECRET_KEY'] = getenv("SECRET_KEY")
 
 sio = SocketIO(app, cors_allowed_origins="*")
 
@@ -71,9 +77,8 @@ def sign_up():
 
 @app.route('/api/auth/signin/', methods=['POST'])
 def sign_in():
-    # authData = loads(request.data)
     authData = jsonDecode(request.data)
-    print(f'Login request from: {request.data}')
+    print(f'Login request from: {authData["username"]}')
     session = Session()
     for user in session.query(User).all():
         if(user.username == authData['username']):
@@ -97,7 +102,6 @@ def protectedRoute():
 @sio.on('connect')
 def connect():
     token = request.headers.get('Authorization')
-
     try:
         jwt.decode(
             token, key=app.config['SECRET_KEY'], algorithms=['HS256'])
@@ -105,14 +109,13 @@ def connect():
         print('Denied websocket connection')
         return False
 
-    print('Someone has Connected!')
-    print(f'sid: {request.sid}')
+    print(f'connect: {request.sid}')
     return True
 
 
 @sio.on('disconnect')
 def disconnect():
-    print('Someone has disconnected!')
+    print(f'disconnect: {request.sid}')
 
 
 @sio.on('global message', namespace='/')
@@ -124,4 +127,5 @@ def handleGlobalMessageRoot(message):
 
 if(__name__ == '__main__'):
     print('Starting server...')
-    sio.run(app, debug=False, host='0.0.0.0', port='5000')
+    isDebug = getenv("DEBUG") == "True"
+    sio.run(app, debug=isDebug, host='0.0.0.0', port='5000')

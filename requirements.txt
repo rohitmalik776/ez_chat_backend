@@ -23,10 +23,12 @@ Jinja2==3.0.3
 MarkupSafe==2.0.1
 multidict==5.2.0
 psycopg2==2.9.3
+psycopg2-binary==2.9.3
 pycodestyle==2.8.0
 pycparser==2.21
 PyJWT==2.3.0
 PyMySQL==1.0.2
+python-dotenv==0.20.0
 python-engineio==3.14.2
 python-socketio==4.6.1
 six==1.16.0

@@ -1,13 +1,22 @@
 from sqlalchemy import engine, create_engine, Column, String
 from sqlalchemy.orm import declarative_base, sessionmaker
+from os import getenv
+from dotenv import load_dotenv
+
+load_dotenv(".env")
 
 # Sqlalchemy
 # ://username:password@host/db_name
-# engine = create_engine("mysql+pymysql://root:Password@localhost/ez_chat",
-#                        echo=False, future=True)
 
-engine = create_engine("postgresql+psycopg2://vsggyadxaqinab:0ca7e9fe334e50369eeb67d2365bc3f3203afd5f6b4c8720c00b71dff921a534@ec2-34-248-169-69.eu-west-1.compute.amazonaws.com/dc20hofmu13lal",
-                       echo=False, future=True)
+engine = create_engine(f'{getenv("DB_TYPE")}{getenv("DATABASE_URL")[8:]}',
+                       echo=False,
+                       future=True
+                       )
+
+# engine = create_engine(f'{getenv("DB_TYPE")}://{getenv("DB_USERNAME")}:{getenv("DB_PASSWORD")}@{getenv("DB_HOST")}/{getenv("DB_NAME")}',
+#                        echo=False,
+#                        future=True
+#                        )
 
 Base = declarative_base()
 
