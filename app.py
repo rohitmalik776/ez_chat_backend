@@ -120,12 +120,15 @@ def disconnect():
 
 @sio.on('global message', namespace='/')
 def handleGlobalMessageRoot(message):
+    print(f'receive {message}')
     emit('global message', message, broadcast=True)
+    print(f'emit {message}')
 
 
 # Run app
 
-if(__name__ == '__main__'):
-    print('Starting server...')
-    isDebug = getenv("DEBUG") == "True"
-    sio.run(app, debug=isDebug, host='0.0.0.0', port='5000')
+# if(__name__ == '__main__'):
+print('Starting server...')
+isDebug = getenv("DEBUG") == "True"
+port = int(getenv("PORT"))
+sio.run(app, debug=isDebug, host='0.0.0.0', port=port)
